@@ -36,6 +36,24 @@ export function isValidEvent(): boolean {
     return RefKey in process.env && Boolean(process.env[RefKey]);
 }
 
+/**
+ * Normalizes paths to handle container environments where HOME might be "/"
+ * This prevents issues with tilde expansion when HOME="/" results in paths like "//"
+ */
+export function normalizePath(path: string): string {
+    // If path starts with ~/ and HOME is missing or "/", replace ~/ with /
+    if (path.startsWith("~/") && (!process.env.HOME || process.env.HOME === "/")) {
+        return path.replace(/^~\//, "/");
+    }
+    
+    // Handle the case where path is just "~" and HOME is missing or "/"
+    if (path === "~" && (!process.env.HOME || process.env.HOME === "/")) {
+        return "/";
+    }
+    
+    return path;
+}
+
 export function getInputAsArray(
     name: string,
     options?: core.InputOptions
@@ -44,6 +62,7 @@ export function getInputAsArray(
         .getInput(name, options)
         .split("\n")
         .map(s => s.replace(/^!\s+/, "!").trim())
+        .map(s => normalizePath(s)) // Normalize paths for container compatibility
         .filter(x => x !== "");
 }
 

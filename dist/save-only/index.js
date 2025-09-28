@@ -100319,7 +100319,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.isCacheFeatureAvailable = exports.getInputAsBool = exports.getInputAsInt = exports.getInputAsArray = exports.isValidEvent = exports.logWarning = exports.isExactKeyMatch = exports.isGhes = void 0;
+exports.isCacheFeatureAvailable = exports.getInputAsBool = exports.getInputAsInt = exports.getInputAsArray = exports.normalizePath = exports.isValidEvent = exports.logWarning = exports.isExactKeyMatch = exports.isGhes = void 0;
 const cache = __importStar(__nccwpck_require__(5116));
 const core = __importStar(__nccwpck_require__(7484));
 const constants_1 = __nccwpck_require__(7242);
@@ -100350,11 +100350,28 @@ function isValidEvent() {
     return constants_1.RefKey in process.env && Boolean(process.env[constants_1.RefKey]);
 }
 exports.isValidEvent = isValidEvent;
+/**
+ * Normalizes paths to handle container environments where HOME might be "/"
+ * This prevents issues with tilde expansion when HOME="/" results in paths like "//"
+ */
+function normalizePath(path) {
+    // If path starts with ~/ and HOME is missing or "/", replace ~/ with /
+    if (path.startsWith("~/") && (!process.env.HOME || process.env.HOME === "/")) {
+        return path.replace(/^~\//, "/");
+    }
+    // Handle the case where path is just "~" and HOME is missing or "/"
+    if (path === "~" && (!process.env.HOME || process.env.HOME === "/")) {
+        return "/";
+    }
+    return path;
+}
+exports.normalizePath = normalizePath;
 function getInputAsArray(name, options) {
     return core
         .getInput(name, options)
         .split("\n")
         .map(s => s.replace(/^!\s+/, "!").trim())
+        .map(s => normalizePath(s)) // Normalize paths for container compatibility
         .filter(x => x !== "");
 }
 exports.getInputAsArray = getInputAsArray;
